@@ -6,6 +6,7 @@ from datetime import datetime
 user_record = "users.txt"
 
 expenses = {}
+
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -33,6 +34,7 @@ def login_user():
         return username
     else:
         print("Invalid username or password.")
+        return None
 
 def user_exists(username):
     if not os.path.exists(user_record):
@@ -82,7 +84,6 @@ def create_record(username):
     record_type = input("Enter record type (income/expense): ").lower()
     amount = float(input("Enter amount: "))
     category = input("Enter category (e.g., food, rent, salary): ")
-    description = input("Enter description: ")
     date = input(f"Enter date (YYYY-MM-DD) or press Enter for today: ")
     if not date:
         date = datetime.now().strftime('%Y-%m-%d')
@@ -91,7 +92,6 @@ def create_record(username):
         'Date': date,
         'Amount': amount,
         'Category': category,
-        'Description': description,
         'Type': record_type
     }
     expenses[username].append(new_record)
@@ -102,15 +102,54 @@ def read_records(username):
     if not expenses[username]:
         print("No records found.")
         return
-    print("\n▒▒▒▒▒▒▒▒▒▒▒▒ Expense Records ▒▒▒▒▒▒▒▒▒▒▒▒")
+    print("\n----------- Expense Records -----------")
     for record in expenses[username]:
         print(f"""
           Date: {record['Date']}
           Amount: {record['Amount']}
           Category: {record['Category']}
-          Description: {record['Description']}
           Type: {record['Type']}
 """)
+        
+def update_record(username):
+    date_to_update = input("Enter the date of the record to update (YYYY-MM-DD): ")
+    updated = False
+
+    for record in expenses[username]:
+        if record['Date'] == date_to_update:
+            print(f"Record found: {record}")
+            record['Amount'] = float(input("Enter new amount: "))
+            record['Category'] = input("Enter new category: ")
+            record['Type'] = input("Enter new record type (income/expense): ").lower()
+            updated = True
+            break
+
+    if updated:
+        save_dict_to_csv(username)
+        print(f"Record for {date_to_update} updated.")
+    else:
+        print(f"No record found for {date_to_update}.")
+
+def delete_record(username):
+    date_to_delete = input("Enter the date of the record to delete (YYYY-MM-DD): ")
+    initial_length = len(expenses[username])
+    expenses[username] = [record for record in expenses[username] if record['Date'] != date_to_delete]
+
+    if len(expenses[username]) < initial_length:
+        save_dict_to_csv(username)
+        print(f"Record for {date_to_delete} deleted.")
+    else:
+        print(f"No record found for {date_to_delete}.")
+
+def view_reports(username):
+    total_income = sum(float(record['Amount']) for record in expenses[username] if record['Type'] == 'income')
+    total_expense = sum(float(record['Amount']) for record in expenses[username] if record['Type'] == 'expense')
+    balance = total_income - total_expense
+    print("\n----------- Expense Report -----------")
+    print(f"\tTotal Income: {total_income}")
+    print(f"\tTotal Expenses: {total_expense}")
+    print(f"\tBalance: {balance}\n")
+    
 def main_menu():
   print("▒"*42)
   print("▒▒\t                           \t▒▒")
@@ -130,7 +169,8 @@ def main_menu():
         print("Invalid choice.")
   print("\nEnter your login details:")
   username = login_user()
-
+  if not username:
+      login_user()
   while True: 
       print("▒"*42)
       print("▒▒\t                           \t▒▒")

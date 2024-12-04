@@ -2,6 +2,7 @@ import os
 import hashlib
 import csv
 from datetime import datetime
+import getpass
 
 user_record = "users.txt"
 
@@ -12,7 +13,7 @@ def hash_password(password):
 
 def register_user():
     username = input("\nEnter your Username: ")
-    password = input("Enter your Password: ")
+    password = getpass.getpass("Enter your Password: ")
 
     if user_exists(username):
         print("Username already exists. Please choose another.")
@@ -26,7 +27,7 @@ def register_user():
 
 def login_user():
     username = input("\nEnter your Username: ")
-    password = input("Enter your Password: ")
+    password = getpass.getpass("Enter your Password: ")
 
     if authenticate_user(username, password):
         load_records_to_dict(username) 

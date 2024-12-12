@@ -1,33 +1,26 @@
 import os
-import hashlib
-import csv
 from datetime import datetime
-import getpass
 
 user_record = "users.txt"
 
 expenses = {}
 
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
-
 def register_user():
     username = input("\nEnter your Username: ")
-    password = getpass.getpass("Enter your Password: ")
+    password = input("Enter your Password: ")
 
     if user_exists(username):
         print("Username already exists. Please choose another.")
         return
-    hashed_password = hash_password(password)
 
     with open(user_record, 'a') as file:
-        file.write(f"{username},{hashed_password}\n")
+        file.write(f"{username},{password}\n")
     
     print("User successfully registered!")
 
 def login_user():
     username = input("\nEnter your Username: ")
-    password = getpass.getpass("Enter your Password: ")
+    password = input("Enter your Password: ")
 
     if authenticate_user(username, password):
         load_records_to_dict(username) 
@@ -57,29 +50,40 @@ def authenticate_user(username, password):
     with open(user_record, 'r') as file:
         users = file.readlines()
     
-    hashed_password = hash_password(password)
-
     for user in users:
         saved_username, saved_password = user.strip().split(',')
-        if saved_username == username and saved_password == hashed_password:
+        if saved_username == username and saved_password == password:
             return True
     
     return False
 
 def load_records_to_dict(username):
-    file_path = f"{username}_expenses.csv"
+    file_path = f"{username}_expenses.txt"
     expenses[username] = []  
     if os.path.exists(file_path):
         with open(file_path, 'r') as file:
-            reader = csv.DictReader(file)
-            expenses[username] = list(reader)
+            record = {}
+            for line in file:
+                line = line.strip()
+                if line.startswith("Date: "):
+                    record['Date'] = line.split("Date: ")[1]
+                elif line.startswith("Amount: "):
+                    record['Amount'] = float(line.split("Amount: ")[1])
+                elif line.startswith("Category: "):
+                    record['Category'] = line.split("Category: ")[1]
+                elif line.startswith("Type: "):
+                    record['Type'] = line.split("Type: ")[1]
+                    expenses[username].append(record)
+                    record = {}
 
-def save_dict_to_csv(username):
-    file_path = f"{username}_expenses.csv"
-    with open(file_path, 'w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=['Date', 'Amount', 'Category', 'Description', 'Type'])
-        writer.writeheader()
-        writer.writerows(expenses[username])
+def save_dict_to_txt(username):
+    file_path = f"{username}_expenses.txt"
+    with open(file_path, 'w') as file:
+        for record in expenses[username]:
+            file.write(f"Date: {record['Date']}\n")
+            file.write(f"Amount: {record['Amount']}\n")
+            file.write(f"Category: {record['Category']}\n")
+            file.write(f"Type: {record['Type']}\n\n")
 
 def create_record(username):
     record_type = input("Enter record type (income/expense): ").lower()
@@ -96,7 +100,7 @@ def create_record(username):
         'Type': record_type
     }
     expenses[username].append(new_record)
-    save_dict_to_csv(username)
+    save_dict_to_txt(username)
     print("Record added successfully!")
 
 def read_records(username):
@@ -126,21 +130,23 @@ def update_record(username):
             break
 
     if updated:
-        save_dict_to_csv(username)
+        save_dict_to_txt(username)
         print(f"Record for {date_to_update} updated.")
     else:
         print(f"No record found for {date_to_update}.")
 
 def delete_record(username):
     date_to_delete = input("Enter the date of the record to delete (YYYY-MM-DD): ")
+    category_to_delete = input("Enter the category of the record to delete: ").lower()
     initial_length = len(expenses[username])
-    expenses[username] = [record for record in expenses[username] if record['Date'] != date_to_delete]
+    
+    expenses[username] = [record for record in expenses[username] if not (record['Date'] == date_to_delete and record['Category'].lower() == category_to_delete)]
 
     if len(expenses[username]) < initial_length:
-        save_dict_to_csv(username)
-        print(f"Record for {date_to_delete} deleted.")
+        save_dict_to_txt(username)
+        print(f"Record for {date_to_delete} with category {category_to_delete} deleted.")
     else:
-        print(f"No record found for {date_to_delete}.")
+        print(f"No record found for {date_to_delete} with category {category_to_delete}.")
 
 def view_reports(username):
     total_income = sum(float(record['Amount']) for record in expenses[username] if record['Type'] == 'income')
@@ -202,5 +208,6 @@ def main_menu():
           break
       else:
             print("Invalid option, try again.")
+
 if __name__ == "__main__":
     main_menu()
